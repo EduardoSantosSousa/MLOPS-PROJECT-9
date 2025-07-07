@@ -1,6 +1,6 @@
 Azure_ACR_Credentials.json
 Azure_SP.json
-config/config.yml
+config.yml
 notebooks/
 logs/
 MLOPS_PROJECT_NINE.egg-info/

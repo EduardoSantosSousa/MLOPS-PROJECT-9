@@ -1,4 +1,4 @@
-config/config.yml
+config.yml
 venv/
 logs/
 MLOPS_PROJECT_NINE.egg-info/
