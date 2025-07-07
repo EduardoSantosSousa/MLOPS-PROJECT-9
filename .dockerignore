@@ -1,0 +1,17 @@
+Azure_ACR_Credentials.json
+Azure_SP.json
+config/config.yml
+notebooks/
+logs/
+MLOPS_PROJECT_NINE.egg-info/
+DeployAzure_Notes.md/
+.git
+.github
+Dockerfile
+.dockerignore
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/

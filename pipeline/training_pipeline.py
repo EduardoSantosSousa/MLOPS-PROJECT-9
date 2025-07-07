@@ -4,8 +4,6 @@ from config.paths_config import *
 from src.data_ingestion import DataIngestionAzure
 from src.model_training import ModelTraining
 
-
-
 if __name__ == "__main__":
     config = read_yaml(file_path=CONFIG_PATH)
 
