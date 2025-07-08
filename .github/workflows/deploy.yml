@@ -65,8 +65,10 @@ jobs:
     - name: Move Model to Correct Location
       run: |
         mkdir -p model config
-        mv artifact-download/model/model.joblib model/
-        mv artifact-download/config/paths_config.py config/
+        # puxa model.joblib de dentro de qualquer subpasta dentro de artifact-download
+        mv artifact-download/*/model/model.joblib model/
+        # puxa paths_config.py de dentro de qualquer subpasta
+        mv artifact-download/*/config/paths_config.py config/
         rm -rf artifact-download
 
     - name: Set up Docker Buildx
