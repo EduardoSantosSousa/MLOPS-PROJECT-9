@@ -53,8 +53,8 @@ jobs:
       with:
         name: trained-model
         path: |
-          ${{ github.workspace }}/models/model.pkl
-          ${{ github.workspace }}/config/paths_config.py
+         artifacts/models/model.pkl
+         config/paths_config.py
         retention-days: 1
 
   build-and-deploy:
