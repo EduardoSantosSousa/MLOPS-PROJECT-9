@@ -38,13 +38,23 @@ jobs:
       run: |
         python pipeline/training_pipeline.py
         
+    - name: Verify Model File
+      run: |
+        ls -la model/
+        if [ -f "model/model.joblib" ]; then
+          echo "✅ Model file exists"
+        else
+          echo "❌ Model file not found!"
+          exit 1
+        fi
+        
     - name: Upload Trained Model
-      uses: actions/upload-artifact@v4  # Atualizado para v4
+      uses: actions/upload-artifact@v4
       with:
         name: trained-model
         path: |
-          model/model.joblib
-          config/paths_config.py
+          ${{ github.workspace }}/model/model.joblib
+          ${{ github.workspace }}/config/paths_config.py
         retention-days: 1
 
   build-and-deploy:
@@ -57,7 +67,7 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Download Model Artifact
-      uses: actions/download-artifact@v4  # Atualizado para v4
+      uses: actions/download-artifact@v4
       with:
         name: trained-model
         path: artifact-download
@@ -65,20 +75,28 @@ jobs:
     - name: Debug - List downloaded files
       run: ls -R artifact-download 
 
-    - name: Move Model to Correct Location
+    - name: Move Files to Correct Location
       run: |
-        # Cria os diretórios de destino
-        mkdir -p model config
-    
-        # Move os arquivos diretamente da estrutura do artifact
-        mv artifact-download/model/model.joblib model/
-        mv artifact-download/config/paths_config.py config/   
+        # Verifica e move o modelo
+        if [ -f "artifact-download/model.joblib" ]; then
+          mkdir -p model
+          mv artifact-download/model.joblib model/
+        else
+          echo "⚠️ model.joblib not found in artifact!"
+        fi
 
-        # Remove o diretório temporário
+        # Verifica e move o arquivo de configuração
+        if [ -f "artifact-download/paths_config.py" ]; then
+          mkdir -p config
+          mv artifact-download/paths_config.py config/
+        elif [ -f "artifact-download/config/paths_config.py" ]; then
+          mkdir -p config
+          mv artifact-download/config/paths_config.py config/
+        else
+          echo "⚠️ paths_config.py not found in artifact!"
+        fi
+        
         rm -rf artifact-download
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
 
     - name: Login to Azure Container Registry
       uses: azure/docker-login@v2
