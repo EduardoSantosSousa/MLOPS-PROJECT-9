@@ -40,8 +40,8 @@ jobs:
         
     - name: Verify Model File
       run: |
-        ls -la model/
-        if [ -f "models/model.pkl" ]; then
+        ls -la artifacts/
+        if [ -f "/models/model.pkl" ]; then
           echo "✅ Model file exists"
         else
           echo "❌ Model file not found!"
