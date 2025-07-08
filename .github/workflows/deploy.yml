@@ -16,10 +16,13 @@ jobs:
   train-model:
     name: Train and Save Model
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Expose project root to PYTHONPATH
+      run: echo "PYTHONPATH=${{ github.workspace }}" >> $GITHUB_ENV
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -29,81 +32,89 @@ jobs:
     - name: Install dependencies
       run: |
         pip install -e .
-        
+
     - name: Run Training Pipeline
       env:
         CONNECTION_STRING: ${{ secrets.CONNECTION_STRING }}
-        CONTAINER_NAME: ${{ secrets.CONTAINER_NAME }}
-        BLOB_NAME: ${{ secrets.BLOB_NAME }}
-      run: |
-        python pipeline/training_pipeline.py
-        
+        CONTAINER_NAME:   ${{ secrets.CONTAINER_NAME }}
+        BLOB_NAME:        ${{ secrets.BLOB_NAME }}
+      run: python -u pipeline/training_pipeline.py
+
     - name: Verify Model File
       run: |
+        echo ">>> Listando artifacts/models"
         ls -R artifacts/models
+
         if [ -f "artifacts/models/model.pkl" ]; then
-          echo "✅ Model file exists"
+          echo "✅ Model file exists at artifacts/models/model.pkl"
         else
           echo "❌ Model file not found!"
           exit 1
         fi
-        
+
     - name: Upload Trained Model
       uses: actions/upload-artifact@v4
       with:
         name: trained-model
         path: |
-         artifacts/models/model.pkl
-         config/paths_config.py
+          artifacts/models/model.pkl
+          config/paths_config.py
         retention-days: 1
 
   build-and-deploy:
     name: Build and Deploy
     runs-on: ubuntu-latest
     needs: train-model
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Download Model Artifact
       uses: actions/download-artifact@v4
       with:
         name: trained-model
         path: artifact-download
 
-    - name: Debug - List downloaded files
-      run: ls -R artifact-download 
+    - name: Debug – list downloaded artifact
+      run: |
+        echo "=== Estrutura de artifact-download ==="
+        ls -R artifact-download
 
     - name: Move Files to Correct Location
       run: |
-        # Verifica e move o modelo
-        if [ -f "artifact-download/model.pkl" ]; then
-          mkdir -p model
-          mv artifact-download/model.pkl model/
-        else
-          echo "⚠️ model.joblib not found in artifact!"
-        fi
+        set -e
 
-        # Verifica e move o arquivo de configuração
-        if [ -f "artifact-download/paths_config.py" ]; then
-          mkdir -p config
-          mv artifact-download/paths_config.py config/
-        elif [ -f "artifact-download/config/paths_config.py" ]; then
-          mkdir -p config
-          mv artifact-download/config/paths_config.py config/
-        else
-          echo "⚠️ paths_config.py not found in artifact!"
+        mkdir -p model config
+
+        # encontra o primeiro model.pkl em qualquer subpasta
+        MODEL_SRC=$(find artifact-download -type f -name "model.pkl" | head -n1)
+        if [ -z "$MODEL_SRC" ]; then
+          echo "❌ model.pkl não encontrado!"
+          ls -R artifact-download
+          exit 1
         fi
-        
+        echo "→ Movendo $MODEL_SRC → model/"
+        mv "$MODEL_SRC" model/
+
+        # encontra o primeiro paths_config.py em qualquer subpasta
+        CONFIG_SRC=$(find artifact-download -type f -name "paths_config.py" | head -n1)
+        if [ -z "$CONFIG_SRC" ]; then
+          echo "❌ paths_config.py não encontrado!"
+          ls -R artifact-download
+          exit 1
+        fi
+        echo "→ Movendo $CONFIG_SRC → config/"
+        mv "$CONFIG_SRC" config/
+
         rm -rf artifact-download
 
     - name: Login to Azure Container Registry
       uses: azure/docker-login@v2
       with:
         login-server: ${{ env.ACR_NAME }}.azurecr.io
-        username: ${{ secrets.ACR_USERNAME }}
-        password: ${{ secrets.ACR_PASSWORD }}
+        username:    ${{ secrets.ACR_USERNAME }}
+        password:    ${{ secrets.ACR_PASSWORD }}
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
